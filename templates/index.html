@@ -1,76 +1,216 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAS 高安全媒体加解密工具</title>
+    <title>酒棉文件保险柜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
-        h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-top: 0; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        .btn-group { display: flex; gap: 15px; margin-top: 30px; }
-        button { flex: 1; padding: 14px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #fff; }
-        .btn-encrypt { background-color: #e74c3c; }
-        .btn-encrypt:hover { background-color: #c0392b; }
-        .btn-decrypt { background-color: #2ecc71; }
-        .btn-decrypt:hover { background-color: #27ae60; }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        body { background-color: #0f172a; min-height: 100vh; color: #f8fafc; }
+        .glass-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
+        .terminal { background: #020617; font-family: 'Courier New', monospace; }
         
-        /* 彩色动画进度条 */
-        .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 8px; margin-top: 30px; overflow: hidden; display: none; height: 24px; position: relative; }
-        .progress-bar { height: 100%; width: 0%; border-radius: 8px; transition: width 0.2s ease;
-            background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+        /* 炫彩渐变进度条 */
+        .progress-gradient {
+            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
             background-size: 200% 200%;
-            animation: gradientMove 2s ease infinite;
+            animation: moveGradient 2s ease infinite;
         }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 13px; font-weight: bold; color: #333; z-index: 2; }
+        @keyframes moveGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        /* 终端日志样式 */
-        .log-container { background-color: #1e1e1e; color: #00ff00; font-family: "Courier New", Courier, monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; margin-top: 20px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>NAS 高安全媒体加解密工具</h1>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto space-y-6">
         
-        <div class="form-group">
-            <label for="targetDir">目标文件夹路径 (容器内路径):</label>
-            <input type="text" id="targetDir" value="{{ last_path }}" placeholder="例如: /data/my_folder">
-        </div>
-        
-        <div class="form-group">
-            <label for="password">加解密密码:</label>
-            <input type="password" id="password" placeholder="请输入高强度密码">
-        </div>
-        
-        <div class="btn-group">
-            <button class="btn-encrypt" id="btnEncrypt" onclick="startTask('encrypt')">批量加密</button>
-            <button class="btn-decrypt" id="btnDecrypt" onclick="startTask('decrypt')">批量解密</button>
+        <!-- 头部 -->
+        <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">NAS Secure Vault</h1>
+            </div>
+            <a href="/logout" class="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">安全退出</a>
         </div>
 
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar" id="progressBar"></div>
-            <div class="progress-text" id="progressText">0%</div>
+        <!-- 控制面板 -->
+        <div class="glass-card p-6 shadow-xl space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 目录选择区 -->
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-slate-300">选择操作目录 (别名)</label>
+                    <div class="flex space-x-2">
+                        <select id="pathSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">正在加载目录...</option>
+                        </select>
+                        <button onclick="openModal()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600" title="管理目录配置">
+                            ⚙️ 管理
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 密码输入区 -->
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-slate-300">加解密密钥</label>
+                    <input type="password" id="password" placeholder="请输入 AES-256 密钥" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex space-x-4 pt-4 border-t border-slate-700">
+                <button id="btnEncrypt" onclick="startTask('encrypt')" 
+                        class="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-900/50 transition-all active:scale-95 disabled:opacity-50">
+                    <span class="flex items-center justify-center">🔒 批量加密 (覆盖原文件)</span>
+                </button>
+                <button id="btnDecrypt" onclick="startTask('decrypt')" 
+                        class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/50 transition-all active:scale-95 disabled:opacity-50">
+                    <span class="flex items-center justify-center">🔓 批量解密 (恢复原文件)</span>
+                </button>
+            </div>
+
+            <!-- 进度条区域 (默认隐藏) -->
+            <div id="progressContainer" class="hidden space-y-2 mt-6">
+                <div class="flex justify-between text-sm text-slate-400">
+                    <span>处理进度</span>
+                    <span id="progressText" class="font-mono font-bold text-white">0%</span>
+                </div>
+                <div class="h-3 w-full bg-slate-900 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full w-0 progress-gradient transition-all duration-300 rounded-full"></div>
+                </div>
+            </div>
         </div>
 
-        <div class="log-container" id="logTerminal">欢迎使用。请选择操作...</div>
+        <!-- 终端日志输出 -->
+        <div class="glass-card overflow-hidden shadow-xl">
+            <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 flex space-x-2 items-center">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2 text-xs text-slate-400 font-mono">Terminal_Output</span>
+            </div>
+            <div id="logTerminal" class="terminal h-72 overflow-y-auto p-4 text-emerald-400 text-sm leading-relaxed whitespace-pre-wrap">Waiting for commands...</div>
+        </div>
+    </div>
+
+    <!-- 目录管理弹窗 (Modal) -->
+    <div id="pathModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+        <div class="bg-slate-800 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">🗂️ 自定义目录管理</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- 列表 -->
+                <div class="space-y-2 max-h-48 overflow-y-auto" id="modalPathList">
+                    <!-- 动态渲染 -->
+                </div>
+
+                <!-- 添加新目录表单 -->
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700 space-y-4">
+                    <h4 class="text-sm font-semibold text-slate-300">新增目录映射</h4>
+                    <input type="text" id="newName" placeholder="UI 显示别名 (例如：我的私人电影库)" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 outline-none">
+                    <input type="text" id="newPath" placeholder="容器内绝对路径 (例如：/data/movies)" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 outline-none font-mono">
+                    <button onclick="addPath()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                        ➕ 保存映射
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         let eventSource = null;
+        let globalPaths = [];
 
+        // 初始化加载目录
+        function loadPaths() {
+            fetch('/api/paths')
+                .then(res => res.json())
+                .then(paths => {
+                    globalPaths = paths;
+                    renderSelect();
+                    renderModalList();
+                });
+        }
+
+        function renderSelect() {
+            const select = document.getElementById('pathSelect');
+            select.innerHTML = '';
+            if (globalPaths.length === 0) {
+                select.innerHTML = '<option value="">暂无目录，请先在右侧管理中添加配置</option>';
+                return;
+            }
+            globalPaths.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.path})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderModalList() {
+            const list = document.getElementById('modalPathList');
+            list.innerHTML = '';
+            if (globalPaths.length === 0) {
+                list.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">无数据</p>';
+            }
+            globalPaths.forEach(p => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-slate-800 p-3 rounded-lg border border-slate-700";
+                item.innerHTML = `
+                    <div class="overflow-hidden">
+                        <div class="font-bold text-sm text-slate-200">${p.name}</div>
+                        <div class="text-xs text-slate-500 font-mono truncate">${p.path}</div>
+                    </div>
+                    <button onclick="deletePath('${p.id}')" class="ml-4 text-red-400 hover:text-red-300 text-sm bg-red-400/10 px-3 py-1 rounded">删除</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 弹窗控制
+        function openModal() { document.getElementById('pathModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('pathModal').classList.add('hidden'); }
+
+        // API 交互
+        function addPath() {
+            const name = document.getElementById('newName').value;
+            const path = document.getElementById('newPath').value;
+            if(!name || !path) return alert("别名和路径不能为空");
+            
+            fetch('/api/paths', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, path})
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    document.getElementById('newName').value = '';
+                    document.getElementById('newPath').value = '';
+                    loadPaths();
+                } else alert(data.msg);
+            });
+        }
+
+        function deletePath(id) {
+            if(!confirm("确定删除此配置吗？")) return;
+            fetch('/api/paths', {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id})
+            }).then(() => loadPaths());
+        }
+
+        // 加解密任务逻辑
         function appendLog(msg) {
             const terminal = document.getElementById('logTerminal');
             if (msg) {
-                terminal.innerHTML += msg + '\n';
+                terminal.innerHTML += `<div><span class="text-blue-400">[SYS]</span> ${msg}</div>`;
                 terminal.scrollTop = terminal.scrollHeight;
             }
         }
@@ -81,63 +221,51 @@
         }
 
         function startTask(mode) {
-            const targetDir = document.getElementById('targetDir').value;
+            const pathId = document.getElementById('pathSelect').value;
             const password = document.getElementById('password').value;
 
-            if (!targetDir || !password) {
-                alert("路径和密码不能为空！");
-                return;
-            }
-
-            if (mode === 'encrypt' && !confirm("警告：加密过程将覆盖原文件并修改文件名，是否继续？")) return;
+            if (!pathId) return alert("请先选择或添加一个操作目录！");
+            if (!password) return alert("密码不能为空！");
+            if (mode === 'encrypt' && !confirm("警告：加密过程将覆盖该目录下所有文件并修改文件名，是否继续？")) return;
 
             setButtonsDisabled(true);
             document.getElementById('logTerminal').innerHTML = '';
-            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressContainer').classList.remove('hidden');
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('progressText').innerText = '0%';
+            appendLog(`Initializing ${mode} sequence on target ID: ${pathId.substring(0,8)}...`);
 
             fetch('/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target_dir: targetDir, mode: mode, password: password })
-            })
-            .then(res => res.json())
-            .then(data => {
+                body: JSON.stringify({ path_id: pathId, mode: mode, password: password })
+            }).then(res => res.json()).then(data => {
                 if (data.status === 'error') {
                     alert(data.msg);
                     setButtonsDisabled(false);
                 } else {
                     listenToLogs();
                 }
-            })
-            .catch(err => {
+            }).catch(err => {
                 alert("请求失败: " + err);
                 setButtonsDisabled(false);
             });
         }
 
         function listenToLogs() {
-            if (eventSource) {
-                eventSource.close();
-            }
+            if (eventSource) eventSource.close();
             eventSource = new EventSource('/stream');
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                
                 if (data.msg === "DONE") {
                     eventSource.close();
                     setButtonsDisabled(false);
-                    appendLog("\n--- 任务已全部完成 ---");
+                    appendLog("<span class='text-yellow-400'>--- SEQUENCE COMPLETE ---</span>");
                     document.getElementById('progressBar').style.width = '100%';
                     document.getElementById('progressText').innerText = '100%';
                     return;
                 }
-
-                if (data.msg) {
-                    appendLog(data.msg);
-                }
-
+                if (data.msg) appendLog(data.msg);
                 if (data.progress !== undefined) {
                     const pct = data.progress.toFixed(1) + '%';
                     document.getElementById('progressBar').style.width = pct;
@@ -145,6 +273,9 @@
                 }
             };
         }
+
+        // 启动时加载
+        window.onload = loadPaths;
     </script>
 </body>
 </html>
