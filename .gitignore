@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+# 排除本地挂载的配置和测试数据目录
+/app_config/
+/data/
