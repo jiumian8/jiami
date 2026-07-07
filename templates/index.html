@@ -3,22 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>酒棉文件保险柜</title>
+    <title>NAS 高安全媒体加解密工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; min-height: 100vh; color: #f8fafc; }
         .glass-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
         .terminal { background: #020617; font-family: 'Courier New', monospace; }
-        
-        /* 炫彩渐变进度条 */
-        .progress-gradient {
-            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-            background-size: 200% 200%;
-            animation: moveGradient 2s ease infinite;
-        }
+        .progress-gradient { background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%); background-size: 200% 200%; animation: moveGradient 2s ease infinite; }
         @keyframes moveGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
-        /* 自定义滚动条 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -28,7 +20,6 @@
 <body class="p-4 md:p-8">
     <div class="max-w-4xl mx-auto space-y-6">
         
-        <!-- 头部 -->
         <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
             <div class="flex items-center space-x-3">
                 <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -37,19 +28,16 @@
             <a href="/logout" class="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">安全退出</a>
         </div>
 
-        <!-- 控制面板 -->
         <div class="glass-card p-6 shadow-xl space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 目录选择区 -->
+                <!-- 目录选择区 (改为多选) -->
                 <div class="space-y-3">
-                    <label class="block text-sm font-medium text-slate-300">选择操作目录 (别名)</label>
-                    <div class="flex space-x-2">
-                        <select id="pathSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">正在加载目录...</option>
-                        </select>
-                        <button onclick="openModal()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600" title="管理目录配置">
-                            ⚙️ 管理
-                        </button>
+                    <div class="flex justify-between items-end">
+                        <label class="block text-sm font-medium text-slate-300">选择操作目录 (支持多选)</label>
+                        <button onclick="openModal()" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">⚙️ 管理目录配置</button>
+                    </div>
+                    <div id="pathCheckboxes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 h-[100px] overflow-y-auto space-y-2">
+                        <!-- Checkboxes will be injected here -->
                     </div>
                 </div>
 
@@ -65,15 +53,14 @@
             <div class="flex space-x-4 pt-4 border-t border-slate-700">
                 <button id="btnEncrypt" onclick="startTask('encrypt')" 
                         class="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-900/50 transition-all active:scale-95 disabled:opacity-50">
-                    <span class="flex items-center justify-center">🔒 批量加密 (覆盖原文件)</span>
+                    <span class="flex items-center justify-center">🔒 批量加密选中目录</span>
                 </button>
                 <button id="btnDecrypt" onclick="startTask('decrypt')" 
                         class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/50 transition-all active:scale-95 disabled:opacity-50">
-                    <span class="flex items-center justify-center">🔓 批量解密 (恢复原文件)</span>
+                    <span class="flex items-center justify-center">🔓 批量解密选中目录</span>
                 </button>
             </div>
 
-            <!-- 进度条区域 (默认隐藏) -->
             <div id="progressContainer" class="hidden space-y-2 mt-6">
                 <div class="flex justify-between text-sm text-slate-400">
                     <span>处理进度</span>
@@ -85,7 +72,6 @@
             </div>
         </div>
 
-        <!-- 终端日志输出 -->
         <div class="glass-card overflow-hidden shadow-xl">
             <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 flex space-x-2 items-center">
                 <div class="w-3 h-3 rounded-full bg-red-500"></div>
@@ -97,28 +83,20 @@
         </div>
     </div>
 
-    <!-- 目录管理弹窗 (Modal) -->
+    <!-- 弹窗 -->
     <div id="pathModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
         <div class="bg-slate-800 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl overflow-hidden">
             <div class="p-6 border-b border-slate-700 flex justify-between items-center">
                 <h3 class="text-xl font-bold text-white">🗂️ 自定义目录管理</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white">✕</button>
             </div>
-            
             <div class="p-6 space-y-6">
-                <!-- 列表 -->
-                <div class="space-y-2 max-h-48 overflow-y-auto" id="modalPathList">
-                    <!-- 动态渲染 -->
-                </div>
-
-                <!-- 添加新目录表单 -->
+                <div class="space-y-2 max-h-48 overflow-y-auto pr-2" id="modalPathList"></div>
                 <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700 space-y-4">
                     <h4 class="text-sm font-semibold text-slate-300">新增目录映射</h4>
                     <input type="text" id="newName" placeholder="UI 显示别名 (例如：我的私人电影库)" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 outline-none">
                     <input type="text" id="newPath" placeholder="容器内绝对路径 (例如：/data/movies)" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-blue-500 outline-none font-mono">
-                    <button onclick="addPath()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg text-sm transition-colors">
-                        ➕ 保存映射
-                    </button>
+                    <button onclick="addPath()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg text-sm transition-colors">➕ 保存映射</button>
                 </div>
             </div>
         </div>
@@ -128,29 +106,30 @@
         let eventSource = null;
         let globalPaths = [];
 
-        // 初始化加载目录
         function loadPaths() {
-            fetch('/api/paths')
-                .then(res => res.json())
-                .then(paths => {
-                    globalPaths = paths;
-                    renderSelect();
-                    renderModalList();
-                });
+            fetch('/api/paths').then(res => res.json()).then(paths => {
+                globalPaths = paths;
+                renderCheckboxes();
+                renderModalList();
+            });
         }
 
-        function renderSelect() {
-            const select = document.getElementById('pathSelect');
-            select.innerHTML = '';
+        // 渲染多选框
+        function renderCheckboxes() {
+            const container = document.getElementById('pathCheckboxes');
+            container.innerHTML = '';
             if (globalPaths.length === 0) {
-                select.innerHTML = '<option value="">暂无目录，请先在右侧管理中添加配置</option>';
+                container.innerHTML = '<div class="text-slate-500 text-sm text-center pt-2">暂无目录，请点击右上角进行配置</div>';
                 return;
             }
             globalPaths.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = `${p.name} (${p.path})`;
-                select.appendChild(opt);
+                const label = document.createElement('label');
+                label.className = "flex items-center space-x-3 cursor-pointer p-2 hover:bg-slate-800 rounded transition-colors border border-transparent hover:border-slate-700";
+                label.innerHTML = `
+                    <input type="checkbox" name="target_paths" value="${p.id}" class="form-checkbox h-4 w-4 text-blue-500 rounded border-slate-600 bg-slate-700 focus:ring-blue-500 focus:ring-offset-slate-900">
+                    <span class="text-sm text-slate-200 font-medium">${p.name} <span class="text-xs text-slate-500 font-mono ml-2">(${p.path})</span></span>
+                `;
+                container.appendChild(label);
             });
         }
 
@@ -174,39 +153,26 @@
             });
         }
 
-        // 弹窗控制
         function openModal() { document.getElementById('pathModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('pathModal').classList.add('hidden'); }
 
-        // API 交互
         function addPath() {
             const name = document.getElementById('newName').value;
             const path = document.getElementById('newPath').value;
             if(!name || !path) return alert("别名和路径不能为空");
-            
-            fetch('/api/paths', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, path})
-            }).then(res => res.json()).then(data => {
-                if(data.status === 'success') {
-                    document.getElementById('newName').value = '';
-                    document.getElementById('newPath').value = '';
-                    loadPaths();
-                } else alert(data.msg);
+            fetch('/api/paths', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, path}) })
+            .then(res => res.json()).then(data => {
+                if(data.status === 'success') { document.getElementById('newName').value = ''; document.getElementById('newPath').value = ''; loadPaths(); }
+                else alert(data.msg);
             });
         }
 
         function deletePath(id) {
             if(!confirm("确定删除此配置吗？")) return;
-            fetch('/api/paths', {
-                method: 'DELETE',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({id})
-            }).then(() => loadPaths());
+            fetch('/api/paths', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) })
+            .then(() => loadPaths());
         }
 
-        // 加解密任务逻辑
         function appendLog(msg) {
             const terminal = document.getElementById('logTerminal');
             if (msg) {
@@ -221,35 +187,30 @@
         }
 
         function startTask(mode) {
-            const pathId = document.getElementById('pathSelect').value;
+            // 获取所有勾选的 Checkbox 的值
+            const checkedBoxes = document.querySelectorAll('input[name="target_paths"]:checked');
+            const pathIds = Array.from(checkedBoxes).map(cb => cb.value);
             const password = document.getElementById('password').value;
 
-            if (!pathId) return alert("请先选择或添加一个操作目录！");
+            if (pathIds.length === 0) return alert("请至少勾选一个操作目录！");
             if (!password) return alert("密码不能为空！");
-            if (mode === 'encrypt' && !confirm("警告：加密过程将覆盖该目录下所有文件并修改文件名，是否继续？")) return;
+            if (mode === 'encrypt' && !confirm(`警告：将覆盖 ${pathIds.length} 个目录下所有的原文件，是否继续？`)) return;
 
             setButtonsDisabled(true);
             document.getElementById('logTerminal').innerHTML = '';
             document.getElementById('progressContainer').classList.remove('hidden');
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('progressText').innerText = '0%';
-            appendLog(`Initializing ${mode} sequence on target ID: ${pathId.substring(0,8)}...`);
+            appendLog(`Initializing ${mode} sequence for ${pathIds.length} directories...`);
 
             fetch('/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path_id: pathId, mode: mode, password: password })
+                body: JSON.stringify({ path_ids: pathIds, mode: mode, password: password })
             }).then(res => res.json()).then(data => {
-                if (data.status === 'error') {
-                    alert(data.msg);
-                    setButtonsDisabled(false);
-                } else {
-                    listenToLogs();
-                }
-            }).catch(err => {
-                alert("请求失败: " + err);
-                setButtonsDisabled(false);
-            });
+                if (data.status === 'error') { alert(data.msg); setButtonsDisabled(false); } 
+                else { listenToLogs(); }
+            }).catch(err => { alert("请求失败: " + err); setButtonsDisabled(false); });
         }
 
         function listenToLogs() {
@@ -274,7 +235,6 @@
             };
         }
 
-        // 启动时加载
         window.onload = loadPaths;
     </script>
 </body>

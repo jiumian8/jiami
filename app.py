@@ -16,7 +16,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 app = Flask(__name__)
-# 配置 Session 密钥
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
 
@@ -77,7 +76,7 @@ def best_effort_wipe(filepath: Path):
         if file_size == 0:
             filepath.unlink()
             return
-        emit_log(f"正在安全擦除源文件(防恢复): {filepath.name}")
+        emit_log(f"  正在安全擦除源文件(防恢复)...")
         bytes_written = 0
         zero_chunk = b'\x00' * CHUNK_SIZE
         with open(filepath, "r+b") as f:
@@ -89,9 +88,9 @@ def best_effort_wipe(filepath: Path):
             f.flush()
             os.fsync(f.fileno())
         filepath.unlink()
-        emit_log(f"[原文件粉碎成功] {filepath.name}")
+        emit_log(f"  [原文件粉碎成功并已安全清理]")
     except Exception as e:
-        emit_log(f"[警告] 安全擦除失败 {filepath.name}: {e}")
+        emit_log(f"  [警告] 尽力覆盖删除失败: {e} (已退化为普通删除)")
         if filepath.exists(): filepath.unlink()
 
 def sanitize_filename(filename: str) -> str:
@@ -114,26 +113,37 @@ def encrypt_file(filepath: Path, password: str) -> bool:
         total_size, processed_size = filepath.stat().st_size, 0
 
         with open(filepath, 'rb') as f_in, open(tmp_filepath, 'wb') as f_out:
-            f_out.write(header); h.update(header)
-            f_out.write(encryptor.update(name_len_bytes)); h.update(encryptor.update(name_len_bytes))
-            f_out.write(encryptor.update(name_bytes)); h.update(encryptor.update(name_bytes))
+            # 修复：严格分离加密与写操作，确保同一份密文同时写入文件和注入 HMAC
+            f_out.write(header)
+            h.update(header)
+            
+            enc_name_len = encryptor.update(name_len_bytes)
+            f_out.write(enc_name_len)
+            h.update(enc_name_len)
+            
+            enc_name = encryptor.update(name_bytes)
+            f_out.write(enc_name)
+            h.update(enc_name)
             
             while chunk := f_in.read(CHUNK_SIZE):
                 enc_chunk = encryptor.update(chunk)
-                f_out.write(enc_chunk); h.update(enc_chunk)
+                f_out.write(enc_chunk)
+                h.update(enc_chunk)
+                
                 processed_size += len(chunk)
                 emit_log(None, (processed_size / total_size) * 100 if total_size > 0 else 100.0)
                 
             enc_final = encryptor.finalize()
-            f_out.write(enc_final); h.update(enc_final)
+            f_out.write(enc_final)
+            h.update(enc_final)
             f_out.write(h.digest())
             
         tmp_filepath.rename(final_filepath)
-        emit_log(f"[加密完成] -> {final_filepath.name}")
+        emit_log(f"  [加密完成] -> {final_filepath.name}")
         best_effort_wipe(filepath)
         return True
     except Exception as e:
-        emit_log(f"[加密失败] {filepath.name}: {e}")
+        emit_log(f"  [加密失败] {filepath.name}: {e}")
         if tmp_filepath and tmp_filepath.exists(): tmp_filepath.unlink()
         return False
 
@@ -144,7 +154,7 @@ def decrypt_file(filepath: Path, password: str) -> bool:
         if file_size < HEADER_SIZE + MAC_SIZE + 4: return False
 
         with open(filepath, 'rb') as f_in:
-            emit_log(f"[阶段 1] 完整性校验... {filepath.name}")
+            emit_log(f"  [阶段 1] 完整性校验...")
             header = f_in.read(HEADER_SIZE)
             magic, version, iterations, salt, nonce = struct.unpack(HEADER_FORMAT, header)
             if magic != MAGIC_BYTES: return False
@@ -156,14 +166,15 @@ def decrypt_file(filepath: Path, password: str) -> bool:
             payload_size, bytes_read = file_size - HEADER_SIZE - MAC_SIZE, 0
             while bytes_read < payload_size:
                 chunk = f_in.read(min(CHUNK_SIZE, payload_size - bytes_read))
-                h.update(chunk); bytes_read += len(chunk)
+                h.update(chunk)
+                bytes_read += len(chunk)
                 emit_log(None, (bytes_read / payload_size) * 100 if payload_size > 0 else 100.0)
                 
             if not hmac.compare_digest(h.digest(), f_in.read(MAC_SIZE)):
-                emit_log(f"[拒绝解密] {filepath.name}: HMAC校验失败 (密码错误或篡改)")
+                emit_log(f"  [拒绝解密] {filepath.name}: HMAC校验失败 (密码错误或篡改)")
                 return False
             
-            emit_log(f"[阶段 2] 正在解密... {filepath.name}")
+            emit_log(f"  [阶段 2] 校验通过，正在解密...")
             f_in.seek(HEADER_SIZE)
             cipher = Cipher(algorithms.AES(aes_key), modes.CTR(nonce))
             decryptor = cipher.decryptor()
@@ -173,45 +184,51 @@ def decrypt_file(filepath: Path, password: str) -> bool:
             output_filepath = filepath.with_name(safe_name)
             tmp_output_filepath = filepath.with_name(safe_name + ".tmp")
             
-            if output_filepath.exists(): return False
+            if output_filepath.exists(): 
+                emit_log(f"  [跳过] 文件 {safe_name} 已存在。")
+                return False
 
             data_size, processed_size = payload_size - 4 - name_len, 0
             with open(tmp_output_filepath, 'wb') as f_out:
                 while processed_size < data_size:
                     chunk = f_in.read(min(CHUNK_SIZE, data_size - processed_size))
-                    f_out.write(decryptor.update(chunk)); processed_size += len(chunk)
+                    f_out.write(decryptor.update(chunk))
+                    processed_size += len(chunk)
                     emit_log(None, (processed_size / data_size) * 100 if data_size > 0 else 100.0)
 
         tmp_output_filepath.rename(output_filepath)
-        emit_log(f"[解密成功] -> {safe_name}")
+        emit_log(f"  [解密成功] -> {safe_name}")
         filepath.unlink() 
         return True
     except Exception as e:
-        emit_log(f"[解密崩溃] {filepath.name}: {e}")
+        emit_log(f"  [解密崩溃] {filepath.name}: {e}")
         if tmp_output_filepath and tmp_output_filepath.exists(): tmp_output_filepath.unlink()
         return False
 
-def process_directory_task(target_dir: str, mode: str, password: str):
+# 支持多目录遍历
+def process_directory_task(target_dirs: list, mode: str, password: str):
     global is_running
     is_running = True
     try:
-        target_path = Path(target_dir)
-        if not target_path.exists() or not target_path.is_dir():
-            emit_log(f"错误：目录 {target_dir} 不存在。")
-            return
-
-        processed_count = 0
-        files = [f for f in target_path.rglob('*') if f.is_file()]
-        
-        for filepath in files:
-            if mode == 'encrypt' and filepath.suffix.lower() != '.enc':
-                emit_log(f"\n开始处理: {filepath.name}")
-                if encrypt_file(filepath, password): processed_count += 1
-            elif mode == 'decrypt' and filepath.suffix.lower() == '.enc':
-                emit_log(f"\n开始处理: {filepath.name}")
-                if decrypt_file(filepath, password): processed_count += 1
-                        
-        emit_log(f"\n[任务结束] 共成功处理了 {processed_count} 个文件。")
+        total_processed = 0
+        for target_dir in target_dirs:
+            target_path = Path(target_dir)
+            if not target_path.exists() or not target_path.is_dir():
+                emit_log(f"[跳过] 目录 {target_dir} 不存在。")
+                continue
+            
+            emit_log(f"\n>> 正在进入目录: {target_dir}")
+            files = [f for f in target_path.rglob('*') if f.is_file()]
+            
+            for filepath in files:
+                if mode == 'encrypt' and filepath.suffix.lower() != '.enc':
+                    emit_log(f"[*] 处理文件: {filepath.name}")
+                    if encrypt_file(filepath, password): total_processed += 1
+                elif mode == 'decrypt' and filepath.suffix.lower() == '.enc':
+                    emit_log(f"[*] 处理文件: {filepath.name}")
+                    if decrypt_file(filepath, password): total_processed += 1
+                    
+        emit_log(f"\n[任务结束] 所有勾选目录处理完毕，共成功处理 {total_processed} 个文件。")
         emit_log("DONE")
     except Exception as e:
         emit_log(f"发生致命错误: {e}")
@@ -249,7 +266,7 @@ def manage_paths():
     if request.method == 'POST':
         data = request.json
         if not data.get("path", "").startswith("/"):
-            return jsonify({"status": "error", "msg": "安全拦截: 必须使用绝对路径"}), 400
+            return jsonify({"status": "error", "msg": "必须使用绝对路径"}), 400
             
         new_path = {
             "id": uuid.uuid4().hex,
@@ -274,19 +291,23 @@ def start_task():
         return jsonify({"status": "error", "msg": "当前已有任务正在运行，请稍候。"}), 400
         
     data = request.json
-    path_id = data.get('path_id')
+    # 接收数组格式的 path_ids
+    path_ids = data.get('path_ids', [])
     mode = data.get('mode')
     password = data.get('password')
     
+    if not path_ids or not mode or not password:
+        return jsonify({"status": "error", "msg": "参数不完整或未勾选任何目录"}), 400
+        
     config = load_config()
-    target_dir = next((p['path'] for p in config.get('paths', []) if p['id'] == path_id), None)
+    target_dirs = [p['path'] for p in config.get('paths', []) if p['id'] in path_ids]
     
-    if not target_dir or not mode or not password:
-        return jsonify({"status": "error", "msg": "参数不完整或目录非法"}), 400
+    if not target_dirs:
+        return jsonify({"status": "error", "msg": "选中的目录非法或不存在"}), 400
     
     while not task_queue.empty(): task_queue.get()
         
-    thread = threading.Thread(target=process_directory_task, args=(target_dir, mode, password))
+    thread = threading.Thread(target=process_directory_task, args=(target_dirs, mode, password))
     thread.daemon = True
     thread.start()
     
