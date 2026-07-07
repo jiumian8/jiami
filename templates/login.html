@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统登录 - 酒棉文件保险柜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); min-height: 100vh; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="flex items-center justify-center text-white">
+    <div class="glass-panel p-8 rounded-2xl shadow-2xl w-96 transform transition-all hover:scale-[1.02]">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">NAS 加密终端</h1>
+            <p class="text-slate-400 text-sm mt-2">SECURE MEDIA VAULT</p>
+        </div>
+        
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/login" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">访问密钥</label>
+                <input type="password" name="password" required autofocus
+                    class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="请输入管理员密码">
+            </div>
+            <button type="submit" 
+                class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition-all active:scale-95">
+                进入系统
+            </button>
+        </form>
+    </div>
+</body>
+</html>
