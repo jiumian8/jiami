@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAS 高安全媒体加解密工具</title>
+    <title>NAS保险柜</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; min-height: 100vh; color: #f8fafc; }
@@ -23,7 +23,7 @@
         <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
             <div class="flex items-center space-x-3">
                 <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">NAS Secure Vault</h1>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">NAS保险柜</h1>
             </div>
             <a href="/logout" class="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">安全退出</a>
         </div>
@@ -44,7 +44,7 @@
                 <!-- 密码输入区 -->
                 <div class="space-y-3">
                     <label class="block text-sm font-medium text-slate-300">加解密密钥</label>
-                    <input type="password" id="password" placeholder="请输入 AES-256 密钥" 
+                    <input type="password" id="password" placeholder="请输入加解密密码" 
                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
             </div>
@@ -53,11 +53,11 @@
             <div class="flex space-x-4 pt-4 border-t border-slate-700">
                 <button id="btnEncrypt" onclick="startTask('encrypt')" 
                         class="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-900/50 transition-all active:scale-95 disabled:opacity-50">
-                    <span class="flex items-center justify-center">🔒 批量加密选中目录</span>
+                    <span class="flex items-center justify-center">🔒 加密</span>
                 </button>
                 <button id="btnDecrypt" onclick="startTask('decrypt')" 
                         class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/50 transition-all active:scale-95 disabled:opacity-50">
-                    <span class="flex items-center justify-center">🔓 批量解密选中目录</span>
+                    <span class="flex items-center justify-center">🔓 解密</span>
                 </button>
             </div>
 
