@@ -37,7 +37,6 @@ task_queue = queue.Queue()
 is_running = False
 # ============================================
 
-# --- 鉴权装饰器 ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -46,7 +45,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- 配置与目录管理 ---
 def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -62,14 +60,12 @@ def save_config(data):
     except Exception as e:
         print(f"保存配置失败: {e}")
 
-# --- 辅助推送函数 ---
 def emit_log(msg, progress=None):
     data = {}
     if msg is not None: data["msg"] = msg
     if progress is not None: data["progress"] = progress
     task_queue.put(data)
 
-# === 加解密核心逻辑 (保持不变，已省略底层函数具体细节以节省篇幅，直接粘贴你之前的即可) ===
 def derive_keys(password: str, salt: bytes, iterations: int) -> tuple[bytes, bytes]:
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=64, salt=salt, iterations=iterations)
     key_material = kdf.derive(password.encode('utf-8'))
@@ -223,8 +219,6 @@ def process_directory_task(target_dir: str, mode: str, password: str):
     finally:
         is_running = False
 
-# ================= 路由与接口 =================
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -245,7 +239,6 @@ def logout():
 def index():
     return render_template('index.html')
 
-# 解决跨越漏洞：目录映射 API
 @app.route('/api/paths', methods=['GET', 'POST', 'DELETE'])
 @login_required
 def manage_paths():
@@ -255,7 +248,6 @@ def manage_paths():
     
     if request.method == 'POST':
         data = request.json
-        # 基础验证：确保是绝对路径
         if not data.get("path", "").startswith("/"):
             return jsonify({"status": "error", "msg": "安全拦截: 必须使用绝对路径"}), 400
             
@@ -282,11 +274,10 @@ def start_task():
         return jsonify({"status": "error", "msg": "当前已有任务正在运行，请稍候。"}), 400
         
     data = request.json
-    path_id = data.get('path_id') # 前端只传映射ID，防止绝对路径被篡改
+    path_id = data.get('path_id')
     mode = data.get('mode')
     password = data.get('password')
     
-    # 后端根据 ID 查找真实路径 (彻底防御目录穿越)
     config = load_config()
     target_dir = next((p['path'] for p in config.get('paths', []) if p['id'] == path_id), None)
     
